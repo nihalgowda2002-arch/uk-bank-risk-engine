@@ -1,6 +1,5 @@
 # UK Bank Risk Engine
 
-![Python](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-blue)
 ![Tests](https://img.shields.io/badge/tests-34%20passing-brightgreen)
 ![Licence](https://img.shields.io/badge/licence-MIT-lightgrey)
 
@@ -17,8 +16,9 @@ regenerates every number below exactly.
 
 ## Headline results
 
-**IFRS 9 expected credit loss** on a synthetic book of 10,000 mortgages, gross
-balance £2.80bn.
+### IFRS 9 expected credit loss
+
+A synthetic book of 10,000 mortgages, gross balance £2.80bn.
 
 | Scenario | Weight | Provision | Coverage | Stage 1 | Stage 2 | Stage 3 |
 |---|---|---|---|---|---|---|
@@ -31,11 +31,15 @@ The severe downside raises the provision by a factor of **26**, and almost all o
 that comes from stage migration rather than from higher loss rates. 2,991 loans,
 just under 30% of the book, breach the SICR test and move from a twelve-month to
 a lifetime loss allowance. Mean recognised ECL rises from £228 in Stage 1 to
-£17,224 in Stage 2, a factor of 76. This cliff is the single most important
-feature of IFRS 9 and the reason provisions move so violently in a downturn.
+£17,224 in Stage 2, a factor of 76.
 
-**ALM structural hedge**, a mature five-year SONIA receiver ladder on 80% of the
-rate-insensitive deposit base.
+This cliff is the single most important feature of IFRS 9 and the reason bank
+provisions move so violently in a downturn.
+
+### ALM structural hedge
+
+A mature five-year SONIA receiver ladder on 80% of the rate-insensitive deposit
+base.
 
 | Year | Unhedged NII range | Hedged range | Absorbed |
 |---|---|---|---|
@@ -50,8 +54,10 @@ replaced at prevailing rates, so a five-year ladder defends the near term
 strongly and converges towards the unhedged position over its own tenor. A hedge
 is a delay, not a cure.
 
-**Graph money mule detection** on a synthetic network of 3,000 accounts and
-7,831 payments containing 25 planted rings.
+### Graph money mule detection
+
+A synthetic network of 3,000 accounts and 7,831 payments containing 25 planted
+rings.
 
 | Metric | Value |
 |---|---|
@@ -70,19 +76,20 @@ the pipeline is correct, not that it is accurate.
 
 ```
 uk-bank-risk-engine/
-├── .github/workflows/python-app.yml   Lint and test on 3.10, 3.11 and 3.12
 ├── src/
-│   ├── data_generator.py              Synthetic macro scenarios and loan book
-│   ├── ifrs9_engine.py                PD, LGD, EAD, SICR staging, ECL
-│   ├── alm_hedging.py                 Deposit decay and the swap ladder
-│   └── fraud_graph.py                 Graph features and the mule classifier
+│   ├── data_generator.py    Synthetic macro scenarios and loan book
+│   ├── ifrs9_engine.py      PD, LGD, EAD, SICR staging, ECL
+│   ├── alm_hedging.py       Deposit decay and the swap ladder
+│   └── fraud_graph.py       Graph features and the mule classifier
 ├── tests/
-│   ├── test_ifrs9.py                  20 tests
-│   └── test_alm.py                    14 tests
-├── app/dashboard.py                   Streamlit dashboard, three tabs
-├── run_analysis.py                    Full pipeline, prints results, writes figures
+│   ├── test_ifrs9.py        20 tests
+│   └── test_alm.py          14 tests
+├── app/
+│   └── dashboard.py         Streamlit dashboard, three tabs
+├── run_analysis.py          Full pipeline: prints results, writes figures
+├── requirements.txt
 ├── Dockerfile
-└── requirements.txt
+└── UK-Bank-Risk-Engine-slides.pdf
 ```
 
 ## Running it
@@ -105,23 +112,23 @@ docker run -p 8501:8501 uk-bank-risk-engine
 
 ### IFRS 9 expected credit loss
 
-Lifetime ECL discounted at the effective interest rate:
+Lifetime ECL, discounted at the effective interest rate:
 
 ```
 ECL = Σ_t  S_{t-1} · PD_t · LGD_t · EAD_t / (1 + r)^t
 ```
 
-where `S_{t-1}` is the probability of surviving to the start of year `t`, so
-that marginal rather than cumulative default is used in each period.
+`S_{t-1}` is the probability of surviving to the start of year `t`, so marginal
+rather than cumulative default is used in each period.
 
 **Macro-adjusted PD** through a logistic link:
 
 ```
-logit(PD_t) = logit(PD_0) + s_i · ( β₁ · ΔUnemployment_t − β₂ · (HPI_t − 1) )
+logit(PD_t) = logit(PD_0) + s · ( β₁ · ΔUnemployment_t − β₂ · (HPI_t − 1) )
 ```
 
-The loan-level multiplier `s_i` rises with LTV and with the debt service ratio.
-Without it every loan receives the same shift in log-odds, the PD ratio used by
+The loan-level multiplier `s` rises with LTV and with the debt service ratio.
+Without it, every loan receives the same shift in log-odds, the PD ratio used by
 the SICR test is then almost identical across the book, and staging becomes an
 all-or-nothing switch for the whole portfolio. That is an artefact, not a result.
 
@@ -162,17 +169,17 @@ which is what a layering account does. It is defined symmetrically so that
 accounts with only inflows or only outflows do not dominate through a near-zero
 denominator.
 
-## Deviations from the original project plan
+## Deviations from the original specification
 
-Four changes were made deliberately, each because the original specification was
-either wrong or ambiguous.
+Four changes were made deliberately, each because the original was either wrong
+or ambiguous.
 
-1. **LGD sign.** The plan writes the haircut term as `LTV · (1 − ΔHPI)`. That has
-   rising house prices *increasing* loss given default. Corrected to a cumulative
-   house price index applied to collateral value.
+1. **LGD sign.** The specification writes the haircut term as `LTV · (1 − ΔHPI)`,
+   which has rising house prices *increasing* loss given default. Corrected to a
+   cumulative house price index applied to collateral value.
 2. **SICR threshold.** "ΔPD ≥ 200%" is ambiguous between a doubling and a
-   tripling. Implemented as a PD ratio of 3.0, which matches the plan's own test
-   case that staging should shift when PD triples.
+   tripling. Implemented as a PD ratio of 3.0, matching the specification's own
+   test case that staging should shift when PD triples.
 3. **Hedge notional.** The hedge is sized on the rate-insensitive share of
    deposits, `deposits × (1 − beta)`, not the full deposit base, and the ladder
    is mature at the start rather than built from nothing. A ladder built from
@@ -182,6 +189,20 @@ either wrong or ambiguous.
    XGBoost. It is the same class of model with one fewer dependency, and the
    interface is unchanged if you prefer to swap it back.
 
+## What the tests check
+
+The 34 tests are not coverage theatre. Among other things they check that:
+
+- PD stays strictly inside (0, 1) under extreme macro inputs
+- ECL is never negative, and lifetime ECL is never below twelve-month ECL
+- staging shifts to Stage 2 exactly when PD triples, and to Stage 3 at 90 DPD
+- scenario weights sum to 1.0, and unweighted inputs are rejected
+- the receiver ladder gains when rates fall and loses when they rise
+- a flat rate path at the historical level leaves the ladder exactly neutral
+- a zero hedge ratio is a no-op
+- mules score higher than ordinary accounts on the conduit and betweenness
+  features, and the classifier beats its base rate
+
 ## Limitations
 
 - Everything is synthetic, so no result is evidence about any real bank.
@@ -189,8 +210,8 @@ either wrong or ambiguous.
   real balance sheet would link credit losses, deposit behaviour and rates.
 - The macro model is a deterministic ramp with noise, not a stochastic scenario
   generator, so tail risk is imposed rather than emergent.
-- Basel capital treatment, ring-fencing constraints and the regulatory
-  reimbursement rules referenced in the project brief are not modelled.
+- Basel capital treatment, ring-fencing constraints and payment reimbursement
+  rules are not modelled.
 
 ## Author
 
